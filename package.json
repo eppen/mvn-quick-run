@@ -1,0 +1,148 @@
+{
+  "name": "mvn-quick-run",
+  "displayName": "Maven Quick Run",
+  "description": "右键 pom.xml / 文件夹快速执行 mvn install / mvn package / mvn package -f pom-war.xml，可选线程数与是否跳过测试",
+  "version": "0.1.0",
+  "publisher": "liuhualiang",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:mvnQuickRun.install",
+    "onCommand:mvnQuickRun.package",
+    "onCommand:mvnQuickRun.packageWar"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mvnQuickRun.install",
+        "title": "Maven: mvn install"
+      },
+      {
+        "command": "mvnQuickRun.package",
+        "title": "Maven: mvn package"
+      },
+      {
+        "command": "mvnQuickRun.packageWar",
+        "title": "Maven: mvn package -f pom-war.xml"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "mvnQuickRun.install",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@1"
+        },
+        {
+          "command": "mvnQuickRun.install",
+          "when": "resourceIsFolder",
+          "group": "maven@1"
+        },
+        {
+          "command": "mvnQuickRun.package",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@2"
+        },
+        {
+          "command": "mvnQuickRun.package",
+          "when": "resourceIsFolder",
+          "group": "maven@2"
+        },
+        {
+          "command": "mvnQuickRun.packageWar",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@3"
+        },
+        {
+          "command": "mvnQuickRun.packageWar",
+          "when": "resourceIsFolder",
+          "group": "maven@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "mvnQuickRun.install",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@1"
+        },
+        {
+          "command": "mvnQuickRun.package",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@2"
+        },
+        {
+          "command": "mvnQuickRun.packageWar",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@3"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "mvnQuickRun.install",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@1"
+        },
+        {
+          "command": "mvnQuickRun.package",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@2"
+        },
+        {
+          "command": "mvnQuickRun.packageWar",
+          "when": "resourceExtname == .xml && resourcePath =~ /pom(-war)?\\.xml$/i",
+          "group": "maven@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Maven Quick Run",
+      "properties": {
+        "mvnQuickRun.mavenCommand": {
+          "type": "string",
+          "default": "mvn",
+          "description": "Maven 可执行命令（默认 mvn，可改为 mvn.cmd 或完整路径）"
+        },
+        "mvnQuickRun.defaultThreads": {
+          "type": "number",
+          "default": 4,
+          "minimum": 1,
+          "description": "默认并行线程数（-T n），askEveryTime 为 true 时每次仍可在 QuickPick 中修改"
+        },
+        "mvnQuickRun.skipTests": {
+          "type": "boolean",
+          "default": false,
+          "description": "默认是否跳过测试（-DskipTests）"
+        },
+        "mvnQuickRun.extraArgs": {
+          "type": "string",
+          "default": "",
+          "description": "追加到命令末尾的额外参数，如 -Pprod -Dmaven.test.skip=true"
+        },
+        "mvnQuickRun.askEveryTime": {
+          "type": "boolean",
+          "default": true,
+          "description": "每次执行前是否弹出 QuickPick 选择线程数与是否跳过测试；false 时直接使用上面的默认值"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.4.0"
+  }
+}
