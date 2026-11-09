@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { MvnBuildOptions } from './mvnRunner';
 
 const THREAD_OPTIONS = [1, 2, 4, 8, 16];
 
@@ -40,26 +41,35 @@ export async function pickThreads(defaultThreads: number): Promise<number | unde
 }
 
 /**
- * 弹出 QuickPick 选择是否跳过测试（-DskipTests）。
- * @returns true=跳过测试，false=不跳过；用户取消时返回 undefined
+ * 弹出多选 QuickPick 选择构建附加项：clean 与跳过测试（-DskipTests）。
+ * 两项可任意组合，预勾选状态取自配置默认值；一次回车即可确认。
+ * @returns 选中的 { clean, skipTests }；用户取消（Esc / 关闭）时返回 undefined
  */
-export async function pickSkipTests(defaultSkip: boolean): Promise<boolean | undefined> {
-  const skipItem: vscode.QuickPickItem & { value: boolean } = {
+export async function pickBuildOptions(
+  defaults: Pick<MvnBuildOptions, 'clean' | 'skipTests'>
+): Promise<Pick<MvnBuildOptions, 'clean' | 'skipTests'> | undefined> {
+  type ToggleItem = vscode.QuickPickItem & { key: 'clean' | 'skipTests' };
+  const cleanItem: ToggleItem = {
+    key: 'clean',
+    label: 'clean',
+    description: '先删除 target 再构建（全量编译，较慢）',
+    picked: defaults.clean,
+  };
+  const skipItem: ToggleItem = {
+    key: 'skipTests',
     label: '跳过测试',
     description: '-DskipTests（仍编译测试代码）',
-    value: true,
+    picked: defaults.skipTests,
   };
-  const runItem: vscode.QuickPickItem & { value: boolean } = {
-    label: '不跳过测试',
-    description: '完整执行测试',
-    value: false,
-  };
-  // 默认项排前，方便直接回车
-  const items = defaultSkip ? [skipItem, runItem] : [runItem, skipItem];
 
-  const picked = await vscode.window.showQuickPick(items, {
-    title: 'Maven 测试',
-    placeHolder: '是否跳过测试？',
+  const picked = await vscode.window.showQuickPick<ToggleItem>([cleanItem, skipItem], {
+    title: 'Maven 构建选项',
+    placeHolder: '勾选要附加的选项（空格切换，回车确认；都不勾则直接回车）',
+    canPickMany: true,
   });
-  return picked ? picked.value : undefined;
+  if (!picked) return undefined;
+  return {
+    clean: picked.some((i) => i.key === 'clean'),
+    skipTests: picked.some((i) => i.key === 'skipTests'),
+  };
 }

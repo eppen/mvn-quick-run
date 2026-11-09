@@ -6,9 +6,17 @@ export type MvnGoal = 'install' | 'package';
 export interface MvnConfig {
   mavenCommand: string;
   defaultThreads: number;
+  clean: boolean;
   skipTests: boolean;
   extraArgs: string;
   askEveryTime: boolean;
+}
+
+/** 一次构建的可选附加项（clean / 线程数 / 跳过测试） */
+export interface MvnBuildOptions {
+  threads: number;
+  clean: boolean;
+  skipTests: boolean;
 }
 
 /** 读取 mvnQuickRun.* 配置（带默认值兜底） */
@@ -17,6 +25,7 @@ export function getConfig(): MvnConfig {
   return {
     mavenCommand: cfg.get<string>('mavenCommand')?.trim() || 'mvn',
     defaultThreads: cfg.get<number>('defaultThreads') ?? 4,
+    clean: cfg.get<boolean>('clean') ?? false,
     skipTests: cfg.get<boolean>('skipTests') ?? false,
     extraArgs: cfg.get<string>('extraArgs') ?? '',
     askEveryTime: cfg.get<boolean>('askEveryTime') ?? true,
@@ -60,24 +69,27 @@ export async function resolveWorkingDir(uri?: vscode.Uri): Promise<string | unde
 }
 
 /**
- * 拼接 Maven 命令，如：mvn package -f pom-war.xml -T 4 -DskipTests
- * extraArgs 追加在末尾。
+ * 拼接 Maven 命令，如：mvn clean package -f pom-war.xml -T 4 -DskipTests
+ * clean 位于 goal 之前（作用于同一次调用，不额外启动一次 Maven），extraArgs 追加在末尾。
  */
 export function buildCommand(
   goal: MvnGoal,
   useWarPom: boolean,
-  threads: number,
-  skipTests: boolean
+  opts: MvnBuildOptions
 ): string {
   const { mavenCommand, extraArgs } = getConfig();
-  const parts: string[] = [mavenCommand, goal];
+  const parts: string[] = [mavenCommand];
+  if (opts.clean) {
+    parts.push('clean');
+  }
+  parts.push(goal);
   if (useWarPom) {
     parts.push('-f', 'pom-war.xml');
   }
-  if (Number.isInteger(threads) && threads > 1) {
-    parts.push('-T', String(threads));
+  if (Number.isInteger(opts.threads) && opts.threads > 1) {
+    parts.push('-T', String(opts.threads));
   }
-  if (skipTests) {
+  if (opts.skipTests) {
     parts.push('-DskipTests');
   }
   const extra = extraArgs.trim();

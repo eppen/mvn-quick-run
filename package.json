@@ -1,7 +1,7 @@
 {
   "name": "mvn-quick-run",
   "displayName": "Maven Quick Run",
-  "description": "右键 pom.xml / 文件夹快速执行 mvn install / mvn package / mvn package -f pom-war.xml，可选线程数与是否跳过测试",
+  "description": "右键 pom.xml / 文件夹快速执行 mvn install / mvn package / mvn package -f pom-war.xml，可选 clean、线程数与是否跳过测试",
   "version": "0.1.0",
   "publisher": "liuhualiang",
   "license": "MIT",
@@ -119,6 +119,11 @@
           "default": false,
           "description": "默认是否跳过测试（-DskipTests）"
         },
+        "mvnQuickRun.clean": {
+          "type": "boolean",
+          "default": false,
+          "description": "默认是否先执行 clean（mvn clean <goal>）；askEveryTime 为 true 时该值只是 QuickPick 里的预勾选状态"
+        },
         "mvnQuickRun.extraArgs": {
           "type": "string",
           "default": "",
@@ -127,7 +132,7 @@
         "mvnQuickRun.askEveryTime": {
           "type": "boolean",
           "default": true,
-          "description": "每次执行前是否弹出 QuickPick 选择线程数与是否跳过测试；false 时直接使用上面的默认值"
+          "description": "每次执行前是否弹出 QuickPick 选择线程数与构建选项（clean / 跳过测试）；false 时直接使用上面的默认值"
         }
       }
     }
