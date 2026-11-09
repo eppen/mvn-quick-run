@@ -2,7 +2,7 @@
   "name": "mvn-quick-run",
   "displayName": "Maven Quick Run",
   "description": "右键 pom.xml / 文件夹快速执行 mvn install / mvn package / mvn package -f pom-war.xml，可选 clean、线程数与是否跳过测试",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "liuhualiang",
   "license": "MIT",
   "engines": {
