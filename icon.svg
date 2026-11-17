@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="g" x1="0" y1="4" x2="0" y2="252" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="rgb(210,35,66)"/>
+      <stop offset="1" stop-color="rgb(163,18,42)"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <rect x="4" y="4" width="248" height="248" rx="56" ry="56"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <rect x="4" y="4" width="248" height="248" fill="url(#g)"/>
+  <polygon id="cube-top" points="112,62 165.69,93 112,124 58.31,93" fill="rgb(255,255,255)"/>
+  <polygon id="cube-left" points="58.31,93 112,124 112,186 58.31,155" fill="rgb(232,232,236)"/>
+  <polygon id="cube-right" points="112,124 165.69,93 165.69,155 112,186" fill="rgb(245,245,247)"/>
+    <circle cx="196" cy="196" r="34" fill="rgb(255,255,255)"/>
+    <polygon points="185,179 185,213 212,196" fill="rgb(199,26,54)"/>
+  </g>
+</svg>
