@@ -1,4 +1,12 @@
+<div align="center">
+
+<img src="icon.png" alt="Maven Quick Run" width="128" />
+
 # Maven Quick Run
+
+[English](README_EN.md) · **中文** · [日本語](README.ja.md)
+
+</div>
 
 VS Code 插件：在文件资源管理器 / 编辑器内对 `pom.xml`、`pom-war.xml` 或文件夹右键，快速执行 Maven 命令，执行前可选线程数、是否 clean、是否跳过测试。
 
