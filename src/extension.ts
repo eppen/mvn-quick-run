@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { pickBuildOptions, pickThreads } from './quickPick';
+import { pickBuildOptions, pickJavaHome, pickThreads } from './quickPick';
 import {
   buildCommand,
   getConfig,
@@ -18,7 +18,7 @@ interface RunOptions {
 /**
  * 命令执行主流程：
  * 1. 解析工作目录（右键对象 / 活动编辑器 / 工作区根）
- * 2. askEveryTime 为 true 时依次弹 QuickPick 选线程数、构建选项（clean / 跳过测试），任一取消则静默中止
+ * 2. askEveryTime 为 true 时依次弹 QuickPick 选线程数、构建选项（clean / 跳过测试）、Java Runtime，任一取消则静默中止
  * 3. 拼接命令并在新建集成终端中执行
  */
 async function runMvn(uri: vscode.Uri | undefined, options: RunOptions): Promise<void> {
@@ -30,6 +30,7 @@ async function runMvn(uri: vscode.Uri | undefined, options: RunOptions): Promise
     threads: config.defaultThreads,
     clean: config.clean,
     skipTests: config.skipTests,
+    javaHome: config.javaHome,
   };
 
   if (config.askEveryTime) {
@@ -39,11 +40,18 @@ async function runMvn(uri: vscode.Uri | undefined, options: RunOptions): Promise
     const pickedToggles = await pickBuildOptions(config);
     if (pickedToggles === undefined) return; // 用户取消
 
-    build = { threads: pickedThreads, ...pickedToggles };
+    const pickedJavaHome = await pickJavaHome(config.javaHome);
+    if (pickedJavaHome === undefined) return; // 用户取消
+
+    build = { threads: pickedThreads, ...pickedToggles, javaHome: pickedJavaHome };
+    // 记住上次选择为默认值
+    await vscode.workspace
+      .getConfiguration('mvnQuickRun')
+      .update('javaHome', pickedJavaHome, vscode.ConfigurationTarget.Global);
   }
 
   const command = buildCommand(options.goal, options.useWarPom, build);
-  runInTerminal(cwd, command, options.label);
+  runInTerminal(cwd, command, options.label, build.javaHome);
 }
 
 export function activate(context: vscode.ExtensionContext): void {

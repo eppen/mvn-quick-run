@@ -4,7 +4,7 @@
   "description": "右键 pom.xml / 文件夹快速执行 mvn install / mvn package / mvn package -f pom-war.xml，可选 clean、线程数与是否跳过测试",
   "icon": "icon.png",
   "readme": "README_EN.md",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "liuhualiang",
   "license": "MIT",
   "repository": {
@@ -113,6 +113,11 @@
           "type": "string",
           "default": "mvn",
           "description": "Maven 可执行命令（默认 mvn，可改为 mvn.cmd 或完整路径）"
+        },
+        "mvnQuickRun.javaHome": {
+          "type": "string",
+          "default": "",
+          "description": "Maven 执行使用的 JAVA_HOME（留空 = 使用系统 JAVA_HOME）；askEveryTime 为 true 时每次仍可在 QuickPick 中切换，上次选择会记住到这里"
         },
         "mvnQuickRun.defaultThreads": {
           "type": "number",

@@ -1,5 +1,7 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
-import { MvnBuildOptions } from './mvnRunner';
+import { MvnBuildOptions, discoverJavaHomes } from './mvnRunner';
 
 const THREAD_OPTIONS = [1, 2, 4, 8, 16];
 
@@ -72,4 +74,62 @@ export async function pickBuildOptions(
     clean: picked.some((i) => i.key === 'clean'),
     skipTests: picked.some((i) => i.key === 'skipTests'),
   };
+}
+
+/**
+ * 弹出 QuickPick 选择本次 Maven 执行使用的 Java Runtime（JAVA_HOME）。
+ * 选项：系统默认（当前 JAVA_HOME）+ 自动扫描到的 JDK + 自定义路径…。
+ * @returns 选中的 JAVA_HOME 路径；'' 表示使用系统默认；用户取消（Esc / 关闭）时返回 undefined
+ */
+export async function pickJavaHome(defaultJavaHome: string): Promise<string | undefined> {
+  const envJavaHome = process.env.JAVA_HOME?.trim() || '(未设置)';
+  const discovered = await discoverJavaHomes();
+
+  const norm = (p: string) => (process.platform === 'win32' ? p.toLowerCase() : p);
+  const def = norm(defaultJavaHome);
+
+  type Item = vscode.QuickPickItem & { value?: string };
+  const items: Item[] = [
+    {
+      label: `系统默认（当前 JAVA_HOME=${envJavaHome}）`,
+      description: defaultJavaHome === '' ? '默认' : '',
+      value: '',
+    },
+  ];
+  for (const jdk of discovered) {
+    items.push({
+      label: jdk.path,
+      description: norm(jdk.path) === def ? '默认' : '',
+      value: jdk.path,
+    });
+  }
+  items.push({ label: '自定义路径…', description: '输入 JDK 安装目录（需含 bin/javac）' });
+
+  const picked = await vscode.window.showQuickPick(items, {
+    title: 'Java Runtime（JAVA_HOME）',
+    placeHolder: '选择本次 Maven 执行使用的 Java Runtime',
+  });
+  if (!picked) return undefined;
+  if (picked.value !== undefined) return picked.value;
+
+  // 自定义路径输入：非法输入由 validateInput 拦截
+  const input = await vscode.window.showInputBox({
+    title: 'Java Runtime（JAVA_HOME）',
+    prompt: '输入 JDK 安装目录（需含 bin/javac）',
+    value: defaultJavaHome,
+    validateInput: async (v) => {
+      const p = v.trim();
+      if (!p) return '请输入路径';
+      const exe = process.platform === 'win32' ? 'javac.exe' : 'javac';
+      try {
+        const st = await fs.promises.stat(path.join(p, 'bin', exe));
+        if (!st.isFile()) return '该目录下没有 bin/javac，请确认是 JDK（而非 JRE）';
+      } catch {
+        return '该目录下没有 bin/javac，请确认是 JDK（而非 JRE）';
+      }
+      return undefined;
+    },
+  });
+  if (input === undefined) return undefined; // 取消
+  return input.trim();
 }

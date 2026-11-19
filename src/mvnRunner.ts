@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -5,6 +6,7 @@ export type MvnGoal = 'install' | 'package';
 
 export interface MvnConfig {
   mavenCommand: string;
+  javaHome: string;
   defaultThreads: number;
   clean: boolean;
   skipTests: boolean;
@@ -17,6 +19,7 @@ export interface MvnBuildOptions {
   threads: number;
   clean: boolean;
   skipTests: boolean;
+  javaHome: string;
 }
 
 /** 读取 mvnQuickRun.* 配置（带默认值兜底） */
@@ -24,6 +27,7 @@ export function getConfig(): MvnConfig {
   const cfg = vscode.workspace.getConfiguration('mvnQuickRun');
   return {
     mavenCommand: cfg.get<string>('mavenCommand')?.trim() || 'mvn',
+    javaHome: cfg.get<string>('javaHome') ?? '',
     defaultThreads: cfg.get<number>('defaultThreads') ?? 4,
     clean: cfg.get<boolean>('clean') ?? false,
     skipTests: cfg.get<boolean>('skipTests') ?? false,
@@ -99,11 +103,109 @@ export function buildCommand(
   return parts.join(' ');
 }
 
-/** 新建集成终端（cwd 为工作目录）并执行命令 */
-export function runInTerminal(cwd: string, command: string, label: string): void {
+/** 扫描常见 JDK 安装目录，返回可用 Java Runtime 列表（按版本号倒序） */
+export interface JavaHome {
+  label: string;
+  path: string;
+}
+
+const isWin = process.platform === 'win32';
+
+const JAVA_ROOTS: string[] = isWin
+  ? [
+      'C:\\Program Files\\Java',
+      'C:\\Program Files\\Eclipse Adoptium',
+      'C:\\Program Files\\Amazon Corretto',
+      'C:\\Program Files\\Zulu',
+      'C:\\Program Files\\Microsoft',
+      'C:\\Program Files\\BellSoft',
+      'C:\\Program Files\\GraalVM',
+      'C:\\Program Files (x86)\\Java',
+    ]
+  : [
+      '/usr/lib/jvm',
+      '/Library/Java/JavaVirtualMachines',
+      '/opt/java',
+    ];
+
+/** 判断目录是否为 JDK（含 bin/javac，过滤 JRE） */
+async function isJdkDir(dir: string): Promise<boolean> {
+  const exe = isWin ? 'javac.exe' : 'javac';
+  try {
+    const st = await fs.promises.stat(path.join(dir, 'bin', exe));
+    return st.isFile();
+  } catch {
+    return false;
+  }
+}
+
+/** 从目录名提取版本号用于排序（如 jdk-17.0.20.8-hotspot → 17.0.20.8） */
+function versionKey(name: string): number[] {
+  const m = name.match(/(\d+(?:\.\d+)*)/);
+  if (!m) return [0];
+  return m[1].split('.').map(Number);
+}
+
+function compareVersions(a: number[], b: number[]): number {
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const x = a[i] ?? 0;
+    const y = b[i] ?? 0;
+    if (x !== y) return x - y;
+  }
+  return 0;
+}
+
+/**
+ * 扫描常见 JDK 安装目录，返回可用 Java Runtime 列表（按版本号倒序）。
+ * 只保留含 bin/javac 的目录（过滤 JRE），并并入当前系统 JAVA_HOME。
+ */
+export async function discoverJavaHomes(): Promise<JavaHome[]> {
+  const found = new Map<string, JavaHome>();
+  const add = (p: string) => {
+    const key = isWin ? p.toLowerCase() : p;
+    if (!found.has(key)) found.set(key, { label: p, path: p });
+  };
+
+  // 当前系统 JAVA_HOME
+  const envJavaHome = process.env.JAVA_HOME?.trim();
+  if (envJavaHome && (await isJdkDir(envJavaHome))) {
+    add(envJavaHome);
+  }
+
+  for (const root of JAVA_ROOTS) {
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(root);
+    } catch {
+      continue; // 根目录不存在
+    }
+    for (const name of entries) {
+      const dir = path.join(root, name);
+      // macOS 的 .jdk bundle 实际 home 在 Contents/Home
+      const candidates = [dir, path.join(dir, 'Contents', 'Home')];
+      for (const c of candidates) {
+        if (await isJdkDir(c)) {
+          add(c);
+          break;
+        }
+      }
+    }
+  }
+
+  const list = [...found.values()];
+  list.sort((a, b) =>
+    compareVersions(versionKey(path.basename(b.path)), versionKey(path.basename(a.path)))
+  );
+  return list;
+}
+
+/** 新建集成终端（cwd 为工作目录）并执行命令；javaHome 非空时向终端环境注入 JAVA_HOME */
+export function runInTerminal(cwd: string, command: string, label: string, javaHome?: string): void {
   const terminal = vscode.window.createTerminal({
     name: `Maven: ${label}`,
     cwd,
+    ...(javaHome ? { env: { JAVA_HOME: javaHome } } : {}),
   });
   terminal.show();
   terminal.sendText(command, true);
